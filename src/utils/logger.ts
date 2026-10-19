@@ -35,12 +35,21 @@ function getLogLevel(): string {
   return process.env.LOG_LEVEL ?? 'info';
 }
 
+/**
+ * Over stdio, stdout carries the JSON-RPC stream, so a log line there breaks the
+ * protocol. Every level then goes to stderr. Over HTTP the defaults stay, so Cloud
+ * Foundry does not tag info lines as errors.
+ */
+function stderrLevels(): string[] {
+  return process.env.MCP_TRANSPORT === 'stdio' ? Object.keys(winston.config.npm.levels) : [];
+}
+
 function createLogger(level?: string): winston.Logger {
   return winston.createLogger({
     level: level ?? getLogLevel(),
     format: isProduction() ? prodFormat : devFormat,
     transports: [
-      new winston.transports.Console(),
+      new winston.transports.Console({ stderrLevels: stderrLevels() }),
     ],
   });
 }
